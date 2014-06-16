@@ -23,54 +23,31 @@ function Puff:initialize(world, x, y, vx, vy, minSize, maxSize)
   minSize = minSize or defaultMinSize
   maxSize = maxSize or defaultMaxSize
 
-  Entity.initialize(self,
-    world,
-    x, y,
-    math.random(minSize, maxSize),
-    math.random(minSize, maxSize)
-  )
-  self.lifeTime = 0.1 + math.random()
-  self.lived = 0
+  local w,h = math.random(minSize, maxSize), math.random(minSize, maxSize)
+
+  Entity.initialize(self, world, x-w/2, y-h/2, w, h)
+
+  self.r, self.g, self.b = 255,255,100
+  local duration = 0.1 + math.random()
   self.vx, self.vy = vx, vy
-end
-
-function Puff:expand(dt)
-  local cx,cy = self:getCenter()
-  local percent = self.lived / self.lifeTime
-  if percent < 0.2 then
-    self.w = self.w + (200 + percent) * dt
-    self.h = self.h + (200 + percent) * dt
-  else
-    self.w = self.w + (20 + percent) * dt
-  end
-
-  self.l = cx - self.w / 2
-  self.t = cy - self.h / 2
+  self:tween(duration*0.5, self, {r=100,g=100,b=100}, 'outQuad')
+  self:tween(duration*0.9, self, {w=50+w, h=50+h},   'outQuart')
+  self:after(duration, Puff.destroy, self)
 end
 
 function Puff:update(dt)
-  self.lived = self.lived + dt
+  local cx, cy = self:getCenter()
 
-  if self.lived >= self.lifeTime  then
-    self:destroy()
-  else
-    self:expand(dt)
-    self:move(self.l + self.vx * dt,
-              self.t + self.vy * dt)
+  Entity.update(self, dt)
+
+  if self:isAlive() then
+    cx, cy = cx + self.vx * dt, cy + self.vy * dt
+    self:move(cx - self.w / 2, cy - self.h / 2)
   end
 end
 
-function Puff:getColor()
-  local percent = math.min(1, (self.lived / self.lifeTime) * 1.8)
-
-  return 255 - math.floor(155*percent),
-         255 - math.floor(155*percent),
-         100
-end
-
 function Puff:draw()
-  local r,g,b = self:getColor()
-  util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
+  util.drawFilledRectangle(self.l, self.t, self.w, self.h, self.r, self.g, self.b)
 end
 
 return Puff
