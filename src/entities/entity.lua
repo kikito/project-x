@@ -9,6 +9,8 @@
 --]]
 
 local class = require 'lib.middleclass'
+local tween = require 'lib.tween'
+local cron  = require 'lib.cron'
 
 local Entity = class('Entity')
 
@@ -19,6 +21,25 @@ function Entity:initialize(world, l,t,w,h)
   self.vx, self.vy = 0,0
   self.world:add(self, l,t,w,h)
   self.created_at = love.timer.getTime()
+  self.counters = {}
+end
+
+function Entity:tween(duration, subject, target, easing)
+  local t = tween.new(duration, subject, target, easing)
+  self.counters[t] = true
+end
+
+function Entity:after(duration, callback, ...)
+  local clock = cron.after(duration, callback, ...)
+  self.counters[clock] = true
+end
+
+function Entity:update(dt)
+  for counter in pairs(self.counters) do
+    if counter:update(dt) then
+      self.counters[counter] = nil
+    end
+  end
 end
 
 function Entity:changeVelocityByGravity(dt)
@@ -53,6 +74,10 @@ end
 
 function Entity:destroy()
   self.world:remove(self)
+end
+
+function Entity:isAlive()
+  return not not self.world.rects[self]
 end
 
 function Entity:getUpdateOrder()
