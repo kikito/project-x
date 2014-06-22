@@ -501,6 +501,10 @@ function World:toCell(x,y)
   return grid_toCell(self.cellSize, x, y)
 end
 
+function World:hasItem(item)
+  return not not self.rects[item]
+end
+
 function World:queryRect(l,t,w,h, filter)
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, l,t,w,h)
