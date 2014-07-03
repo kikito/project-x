@@ -36,9 +36,9 @@ function Map:initialize(width, height, camera)
 end
 
 function Map:reset()
-  local music = media.music
-  music:rewind()
-  music:play()
+  --local music = media.music
+  --music:rewind()
+  --music:play()
 
   local width, height = self.width, self.height
   self.world  = bump.newWorld()
