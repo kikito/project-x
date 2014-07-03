@@ -84,4 +84,8 @@ function Entity:getUpdateOrder()
   return self.class.updateOrder or 10000
 end
 
+function Entity:getZ()
+  return self.created_at
+end
+
 return Entity

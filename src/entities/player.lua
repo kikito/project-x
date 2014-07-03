@@ -20,6 +20,65 @@ local Entity = require 'entities.entity'
 local Debris = require 'entities.debris'
 local Puff   = require 'entities.puff'
 
+---
+local Arm = class('Arm', Entity)
+Arm.static.updateOrder = 2
+
+local armFilter = function(other)
+  local cname = other.class.name
+  return cname == 'Guardian' or cname == 'Block'
+end
+
+function Arm:getZ()
+  return self.z
+end
+
+function Arm:initialize(player, world, quad, z, offsetX, offsetY)
+  self.player = player
+  self.quad   = quad
+  self.z = z
+  self.offsetX, self.offsetY = offsetX, offsetY
+
+  local _,_,w,h = quad:getViewport()
+  Entity.initialize(self, world, player.l, player.t, w, h)
+end
+
+function Arm:update(dt)
+  local pcx, pcy  = self.player:getCenter()
+  local l,t       = pcx - self.w / 2, pcy - self.h / 2
+
+  self:move(l,t)
+
+  local offsetX = self.player.facing == 'right' and self.offsetX or -self.offsetX
+  local future_l = l + offsetX
+  local future_t = t + self.offsetY
+
+  local cols, len = self.world:check(self, future_l, future_t, armFilter)
+  if len > 0 then
+    l,t = cols[1]:getTouch()
+    self:move(l,t)
+  else
+    self:move(future_l, future_t)
+  end
+end
+
+function Arm:draw(drawDebug)
+  local img = media.img.player
+  love.graphics.setColor(255,255,255)
+  if self.player.facing == 'right' then
+    love.graphics.draw(img, self.quad, self.l, self.t)
+  else
+    love.graphics.draw(img, self.quad, self.l+self.w, self.t, 0, -1, 1)
+  end
+
+  if drawDebug then
+    love.graphics.setColor(0,255,0)
+    love.graphics.rectangle('line', self.l, self.t, self.w, self.h)
+  end
+
+end
+---
+
 local Player = class('Player', Entity)
 Player.static.updateOrder = 1
 
@@ -41,43 +100,17 @@ end
 function Player:initialize(map, world, x,y)
   local _,_,body_w, body_h = media.quad.player_body:getViewport()
   local _,_,_,      legs_h = media.quad.player_legs:getViewport()
-  local _,_,fa_w,   fa_h   = media.quad.player_front_arm:getViewport()
-  local _,_,ba_w,   ba_h   = media.quad.player_back_arm:getViewport()
   Entity.initialize(self, world, x, y, body_w, body_h + legs_h)
   self.health = 1
   self.deadCounter = 0
   self.map = map
   self.facing = "right"
-  self.front_arm = {l=0,t=0,w=fa_w,h=fa_h}
-  self.back_arm  = {l=0,t=0,w=ba_w,h=ba_h}
-  self:positionArms()
+  self.front_arm = Arm:new(self, world, media.quad.player_front_arm, 1.1, -(body_w/2 + 20), -5)
+  self.back_arm  = Arm:new(self, world, media.quad.player_back_arm,  0.9, body_w/2, -5)
 end
 
-function Player:destroyArms()
-  local world = self.world
-  if world:hasItem(self.front_arm) then
-    self.world:remove(self.front_arm)
-  end
-  if world:hasItem(self.back_arm) then
-    self.world:remove(self.back_arm)
-  end
-end
-
-function Player:positionArms()
-  self:destroyArms()
-  local fa, ba = self.front_arm, self.back_arm
-
-  if self.facing == 'right' then
-    ba.l = self.l + self.w - ba.w / 2
-    ba.t = self.t + (self.h - ba.h) * 0.8
-    fa.l = self.l - fa.w * 0.85
-    fa.t = self.t + (self.h - fa.h) * 0.8
-  else
-    ba.l = self.l - ba.w / 2
-    ba.t = self.t + (self.h - ba.h) * 0.8
-    fa.l = self.l + self.w - fa.w * 0.15
-    fa.t = self.t + (self.h - fa.h) * 0.8
-  end
+function Player:getZ()
+  return 1
 end
 
 function Player:changeVelocityByKeys(dt)
@@ -204,7 +237,6 @@ function Player:update(dt)
 
   self:moveColliding(dt)
   self:changeVelocityByBeingOnGround(dt)
-  self:positionArms()
 end
 
 function Player:takeHit()
@@ -226,6 +258,9 @@ end
 
 function Player:die()
   media.music:stop()
+
+  self.front_arm:destroy()
+  self.back_arm:destroy()
 
   self.isDead = true
   self.health = 0
@@ -264,24 +299,20 @@ function Player:draw(drawDebug)
     local img        = media.img.player
     local body       = media.quad.player_body
     local legs       = media.quad.player_legs
-    local back_arm   = media.quad.player_back_arm
-    local front_arm  = media.quad.player_front_arm
 
     local _,_,body_w,body_h = body:getViewport()
     local _,_,legs_w,legs_h = legs:getViewport()
 
+    love.graphics.setColor(255,255,255)
+
     if self.facing == 'right' then
-      love.graphics.draw(img, back_arm, self.back_arm.l, self.back_arm.t)
       local legs_l, legs_t = self.l + body_w / 2 - legs_w / 2, self.t + body_w
       love.graphics.draw(img, legs, legs_l, legs_t)
       love.graphics.draw(img, body, self.l, self.t)
-      love.graphics.draw(img, front_arm, self.front_arm.l, self.front_arm.t)
     else
-      love.graphics.draw(img, back_arm, self.back_arm.l + self.back_arm.w, self.back_arm.t, 0, -1, 1)
       love.graphics.draw(img, body, self.l + self.w, self.t, 0, -1, 1)
       local legs_l, legs_t = self.l + self.w + body_w/2 - legs_w, self.t + body_w
       love.graphics.draw(img, legs, legs_l, legs_t, 0, -1, 1)
-      love.graphics.draw(img, front_arm, self.front_arm.l + self.front_arm.w, self.front_arm.t, 0, -1, 1)
     end
   end
 
@@ -294,15 +325,7 @@ function Player:draw(drawDebug)
     end
     love.graphics.setColor(0,255,0)
     love.graphics.rectangle('line', self.l, self.t, self.w, self.h)
-    local fa,ba = self.front_arm, self.back_arm
-    love.graphics.rectangle('line', fa.l, fa.t, fa.w, fa.h)
-    love.graphics.rectangle('line', ba.l, ba.t, ba.w, ba.h)
   end
-end
-
-function Player:destroy()
-  Entity.destroy(self)
-  self:destroyArms()
 end
 
 return Player

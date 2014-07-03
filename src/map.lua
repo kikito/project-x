@@ -21,8 +21,8 @@ local sortByUpdateOrder = function(a,b)
   return a:getUpdateOrder() < b:getUpdateOrder()
 end
 
-local sortByCreatedAt = function(a,b)
-  return a.created_at < b.created_at
+local sortByZ = function(a,b)
+  return a:getZ() < b:getZ()
 end
 
 local Map = class('Map')
@@ -102,7 +102,7 @@ function Map:draw(drawDebug, l,t,w,h)
 
   local visibleThings, len = self.world:queryRect(l,t,w,h)
 
-  table.sort(visibleThings, sortByCreatedAt)
+  table.sort(visibleThings, sortByZ)
 
   for i=1, len do
     visibleThings[i]:draw(drawDebug)

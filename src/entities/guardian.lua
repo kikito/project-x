@@ -33,6 +33,10 @@ local fireCoolDown  = 0.75 -- how much time the guardian takes to "regenerate a 
 local aimDuration   = 1.25 -- time it takes to "aim"
 local targetCoolDown = 2 -- minimum time between "target acquired" chirps
 
+local eyeFilter = function(other)
+  return other.class.name ~= 'Arm'
+end
+
 function Guardian:initialize(world, target, camera, x, y)
   Entity.initialize(self, world, x, y, width, height)
 
@@ -124,7 +128,7 @@ function Guardian:update(dt)
 
     if distance2 <= activeRadius * activeRadius then
       self.isNearTarget = true
-      local itemInfo, len = self.world:querySegmentWithCoords(cx,cy,tx,ty)
+      local itemInfo, len = self.world:querySegmentWithCoords(cx,cy,tx,ty, eyeFilter)
       -- ignore itemsInfo[1] because that's always self
       local info = itemInfo[2]
       if info then
