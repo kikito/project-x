@@ -28,8 +28,6 @@ local deadDuration  = 3   -- seconds until res-pawn
 local runAccel      = 500 -- the player acceleration while going left/right
 local brakeAccel    = 2000
 local jumpVelocity  = 400 -- the initial upwards velocity when jumping
-local width         = 32
-local height        = 64
 local beltWidth     = 2
 local beltHeight    = 8
 
@@ -41,10 +39,45 @@ local playerFilter = function(other)
 end
 
 function Player:initialize(map, world, x,y)
-  Entity.initialize(self, world, x, y, width, height)
+  local _,_,body_w, body_h = media.quad.player_body:getViewport()
+  local _,_,_,      legs_h = media.quad.player_legs:getViewport()
+  local _,_,fa_w,   fa_h   = media.quad.player_front_arm:getViewport()
+  local _,_,ba_w,   ba_h   = media.quad.player_back_arm:getViewport()
+  Entity.initialize(self, world, x, y, body_w, body_h + legs_h)
   self.health = 1
   self.deadCounter = 0
   self.map = map
+  self.facing = "right"
+  self.front_arm = {l=0,t=0,w=fa_w,h=fa_h}
+  self.back_arm  = {l=0,t=0,w=ba_w,h=ba_h}
+  self:positionArms()
+end
+
+function Player:destroyArms()
+  local world = self.world
+  if world:hasItem(self.front_arm) then
+    self.world:remove(self.front_arm)
+  end
+  if world:hasItem(self.back_arm) then
+    self.world:remove(self.back_arm)
+  end
+end
+
+function Player:positionArms()
+  self:destroyArms()
+  local fa, ba = self.front_arm, self.back_arm
+
+  if self.facing == 'right' then
+    ba.l = self.l + self.w - ba.w / 2
+    ba.t = self.t + (self.h - ba.h) * 0.8
+    fa.l = self.l - fa.w * 0.85
+    fa.t = self.t + (self.h - fa.h) * 0.8
+  else
+    ba.l = self.l - ba.w / 2
+    ba.t = self.t + (self.h - ba.h) * 0.8
+    fa.l = self.l + self.w - fa.w * 0.15
+    fa.t = self.t + (self.h - fa.h) * 0.8
+  end
 end
 
 function Player:changeVelocityByKeys(dt)
@@ -55,8 +88,10 @@ function Player:changeVelocityByKeys(dt)
   local vx, vy = self.vx, self.vy
 
   if love.keyboard.isDown("left") then
+    self.facing = "left"
     vx = vx - dt * (vx > 0 and brakeAccel or runAccel)
   elseif love.keyboard.isDown("right") then
+    self.facing = "right"
     vx = vx + dt * (vx < 0 and brakeAccel or runAccel)
   else
     local brake = dt * (vx < 0 and brakeAccel or -brakeAccel)
@@ -81,14 +116,14 @@ function Player:playEffects()
       media.sfx.player_jump:play()
     else
       Puff:new(self.world,
-               self.l,
-               self.t + self.h / 2,
+               self.front_arm.l + self.front_arm.w / 2,
+               self.front_arm.t + self.front_arm.h,
                20 * (1 - math.random()),
                50,
                2, 3)
       Puff:new(self.world,
-               self.l + self.w,
-               self.t + self.h / 2,
+               self.back_arm.l + self.back_arm.w / 2,
+               self.back_arm.t + self.back_arm.h,
                20 * (1 - math.random()),
                50,
                2, 3)
@@ -169,6 +204,7 @@ function Player:update(dt)
 
   self:moveColliding(dt)
   self:changeVelocityByBeingOnGround(dt)
+  self:positionArms()
 end
 
 function Player:takeHit()
@@ -222,18 +258,51 @@ function Player:canFly()
 end
 
 function Player:draw(drawDebug)
-  local r,g,b = self:getColor()
-  util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
 
-  if self:canFly() then
-    util.drawFilledRectangle(self.l - beltWidth, self.t + self.h/2 , self.w + 2 * beltWidth, beltHeight, 255,255,255)
+  if not self.isDead then
+
+    local img        = media.img.player
+    local body       = media.quad.player_body
+    local legs       = media.quad.player_legs
+    local back_arm   = media.quad.player_back_arm
+    local front_arm  = media.quad.player_front_arm
+
+    local _,_,body_w,body_h = body:getViewport()
+    local _,_,legs_w,legs_h = legs:getViewport()
+
+    if self.facing == 'right' then
+      love.graphics.draw(img, back_arm, self.back_arm.l, self.back_arm.t)
+      local legs_l, legs_t = self.l + body_w / 2 - legs_w / 2, self.t + body_w
+      love.graphics.draw(img, legs, legs_l, legs_t)
+      love.graphics.draw(img, body, self.l, self.t)
+      love.graphics.draw(img, front_arm, self.front_arm.l, self.front_arm.t)
+    else
+      love.graphics.draw(img, back_arm, self.back_arm.l + self.back_arm.w, self.back_arm.t, 0, -1, 1)
+      love.graphics.draw(img, body, self.l + self.w, self.t, 0, -1, 1)
+      local legs_l, legs_t = self.l + self.w + body_w/2 - legs_w, self.t + body_w
+      love.graphics.draw(img, legs, legs_l, legs_t, 0, -1, 1)
+      love.graphics.draw(img, front_arm, self.front_arm.l + self.front_arm.w, self.front_arm.t, 0, -1, 1)
+    end
   end
 
   if drawDebug then
     if self.onGround then
       util.drawFilledRectangle(self.l, self.t + self.h - 4, self.w, 4, 255,255,255)
     end
+    if self:canFly() then
+      util.drawFilledRectangle(self.l - beltWidth, self.t + self.h/2 , self.w + 2 * beltWidth, beltHeight, 255,255,255)
+    end
+    love.graphics.setColor(0,255,0)
+    love.graphics.rectangle('line', self.l, self.t, self.w, self.h)
+    local fa,ba = self.front_arm, self.back_arm
+    love.graphics.rectangle('line', fa.l, fa.t, fa.w, fa.h)
+    love.graphics.rectangle('line', ba.l, ba.t, ba.w, ba.h)
   end
+end
+
+function Player:destroy()
+  Entity.destroy(self)
+  self:destroyArms()
 end
 
 return Player

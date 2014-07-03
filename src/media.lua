@@ -5,6 +5,8 @@
 --   the sounds or music are used
 -- * media.music contains a source with the music
 -- * media.sfx.* contains multisources (see lib/multisource.lua)
+-- * media.img.* has images
+-- * media.quad.* has quads
 -- * media.cleanup liberates unused sounds.
 -- * media.countInstances counts how many sound instances are there in the
 --   system. This is used for debugging
@@ -36,6 +38,20 @@ media.load = function()
 
   media.music = love.audio.newSource('sfx/wrath_of_the_djinn.xm')
   media.music:setLooping(true)
+
+  media.img = {
+    player = love.graphics.newImage('img/player.png')
+  }
+
+  local nq = love.graphics.newQuad
+  local pw, ph = media.img.player:getDimensions()
+
+  media.quad = {
+    player_front_arm = nq(15,   7, 68, 106, pw, ph),
+    player_body      = nq(91,  16, 89, 89,  pw, ph),
+    player_back_arm  = nq(202, 11, 55, 99,  pw, ph),
+    player_legs      = nq(107, 125, 57, 19, pw, ph)
+  }
 end
 
 media.cleanup = function()
