@@ -88,24 +88,26 @@ end
 
 function Map:update(dt, l,t,w,h)
   l,t,w,h = l or 0, t or 0, w or self.width, h or self.height
-  local visibleThings, len = self.world:queryRect(l,t,w,h)
+  local visibleEntities, len = self.world:queryRect(l,t,w,h)
 
-  table.sort(visibleThings, sortByUpdateOrder)
+  table.sort(visibleEntities, sortByUpdateOrder)
 
+  local entity
   for i=1, len do
-    visibleThings[i]:update(dt)
+    entity = visibleEntities[i]
+    if entity:isInWorld() then entity:update(dt) end
   end
 end
 
 function Map:draw(drawDebug, l,t,w,h)
   if drawDebug then bump_debug.draw(self.world, l,t,w,h) end
 
-  local visibleThings, len = self.world:queryRect(l,t,w,h)
+  local visibleEntities, len = self.world:queryRect(l,t,w,h)
 
-  table.sort(visibleThings, sortByZ)
+  table.sort(visibleEntities, sortByZ)
 
   for i=1, len do
-    visibleThings[i]:draw(drawDebug)
+    visibleEntities[i]:draw(drawDebug)
   end
 end
 
