@@ -33,11 +33,11 @@ function Arm:getZ()
   return self.z
 end
 
-function Arm:initialize(player, world, quad, z, offsetX, offsetY)
-  self.player = player
-  self.quad   = quad
-  self.z = z
-  self.offsetX, self.offsetY = offsetX, offsetY
+function Arm:initialize(player, world, quad, z, offsetX)
+  self.player   = player
+  self.quad     = quad
+  self.z        = z
+  self.offsetX  = offsetX
 
   local _,_,w,h = quad:getViewport()
   Entity.initialize(self, world, player.l, player.t, w, h)
@@ -51,7 +51,7 @@ function Arm:update(dt)
 
   local offsetX = self.player.facing == 'right' and self.offsetX or -self.offsetX
   local future_l = l + offsetX
-  local future_t = t + self.offsetY
+  local future_t = t
 
   local cols, len = self.world:check(self, future_l, future_t, armFilter)
   if len > 0 then
@@ -89,6 +89,7 @@ local brakeAccel    = 2000
 local jumpVelocity  = 400 -- the initial upwards velocity when jumping
 local beltWidth     = 2
 local beltHeight    = 8
+local extraWidth    = 30
 
 local abs = math.abs
 
@@ -100,13 +101,13 @@ end
 function Player:initialize(map, world, x,y)
   local _,_,body_w, body_h = media.quad.player_body:getViewport()
   local _,_,_,      legs_h = media.quad.player_legs:getViewport()
-  Entity.initialize(self, world, x, y, body_w, body_h + legs_h)
+  Entity.initialize(self, world, x, y, body_w + extraWidth, body_h + legs_h)
   self.health = 1
   self.deadCounter = 0
   self.map = map
   self.facing = "right"
-  self.front_arm = Arm:new(self, world, media.quad.player_front_arm, 1.1, -(body_w/2 + 20), -5)
-  self.back_arm  = Arm:new(self, world, media.quad.player_back_arm,  0.9, body_w/2, -5)
+  self.front_arm = Arm:new(self, world, media.quad.player_front_arm, 1.1, -(body_w/2 + 20))
+  self.back_arm  = Arm:new(self, world, media.quad.player_back_arm,  0.9, body_w/2)
 end
 
 function Player:getZ()
@@ -302,15 +303,16 @@ function Player:draw(drawDebug)
 
     local _,_,body_w,body_h = body:getViewport()
     local _,_,legs_w,legs_h = legs:getViewport()
+    local extraWidth2 = extraWidth / 2
 
     love.graphics.setColor(255,255,255)
 
     if self.facing == 'right' then
       local legs_l, legs_t = self.l + body_w / 2 - legs_w / 2, self.t + body_w
       love.graphics.draw(img, legs, legs_l, legs_t)
-      love.graphics.draw(img, body, self.l, self.t)
+      love.graphics.draw(img, body, self.l + extraWidth2, self.t)
     else
-      love.graphics.draw(img, body, self.l + self.w, self.t, 0, -1, 1)
+      love.graphics.draw(img, body, self.l - extraWidth2 + self.w, self.t, 0, -1, 1)
       local legs_l, legs_t = self.l + self.w + body_w/2 - legs_w, self.t + body_w
       love.graphics.draw(img, legs, legs_l, legs_t, 0, -1, 1)
     end
