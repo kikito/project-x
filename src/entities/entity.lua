@@ -76,7 +76,7 @@ function Entity:destroy()
   self.world:remove(self)
 end
 
-function Entity:isAlive()
+function Entity:isInWorld()
   return not not self.world.rects[self]
 end
 

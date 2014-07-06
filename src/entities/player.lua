@@ -44,7 +44,6 @@ function Arm:initialize(player, world, quad, z, offsetX, offsetY)
 end
 
 function Arm:update(dt)
-  if not self:isAlive() then return end
   local pcx, pcy  = self.player:getCenter()
   local l,t       = pcx - self.w / 2, pcy - self.h / 2
 

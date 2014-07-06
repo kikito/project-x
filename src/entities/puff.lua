@@ -40,7 +40,7 @@ function Puff:update(dt)
 
   Entity.update(self, dt)
 
-  if self:isAlive() then
+  if self:isInWorld() then
     cx, cy = cx + self.vx * dt, cy + self.vy * dt
     self:move(cx - self.w / 2, cy - self.h / 2)
   end
