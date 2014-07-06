@@ -1,6 +1,6 @@
 require 'lib.middleclass'
 local gamera     = require 'lib.gamera'
-local shakycam   = require 'lib.shakycam'
+local cameraman  = require 'lib.cameraman'
 local media      = require 'media'
 local Map        = require 'map'
 
@@ -25,7 +25,7 @@ function love.load()
 
   local width, height = 4000, 2000
   local gamera_cam = gamera.new(0,0, width, height)
-  camera = shakycam.new(gamera_cam)
+  camera = cameraman.new(gamera_cam)
   map    = Map:new(width, height, camera)
 end
 
