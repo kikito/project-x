@@ -8,6 +8,8 @@
 local class       = require 'lib.middleclass'
 local bump        = require 'lib.bump'
 local bump_debug  = require 'lib.bump_debug'
+local gamera      = require 'lib.gamera'
+local cameraman   = require 'lib.cameraman'
 
 local media       = require 'media'
 
@@ -16,6 +18,8 @@ local Block       = require 'entities.block'
 local Guardian    = require 'entities.guardian'
 
 local random = math.random
+
+local updateRadius = 100 -- how "far away from the camera" things stop being updated
 
 local sortByUpdateOrder = function(a,b)
   return a:getUpdateOrder() < b:getUpdateOrder()
@@ -27,12 +31,16 @@ end
 
 local Map = class('Map')
 
-function Map:initialize(width, height, camera)
+function Map:initialize(width, height)
   self.width  = width
   self.height = height
-  self.camera = camera
 
   self:reset()
+end
+
+function Map:getVisible()
+  local l,t,w,h = self.camera:getVisible()
+  return l - updateRadius, t - updateRadius, w + updateRadius * 2, h + updateRadius * 2
 end
 
 function Map:reset()
@@ -43,6 +51,10 @@ function Map:reset()
   local width, height = self.width, self.height
   self.world  = bump.newWorld()
   self.player = Player:new(self, self.world, 60, 60)
+
+  -- camera
+  local gamera_cam = gamera.new(0,0, width, height)
+  self.camera      =  cameraman.new(gamera_cam, self.player)
 
   -- walls & ceiling
   Block:new(self.world,        0,         0, width,        32, true)
@@ -97,18 +109,24 @@ function Map:update(dt, l,t,w,h)
     entity = visibleEntities[i]
     if entity:isInWorld() then entity:update(dt) end
   end
+
+  self.camera:update(dt)
 end
 
-function Map:draw(drawDebug, l,t,w,h)
-  if drawDebug then bump_debug.draw(self.world, l,t,w,h) end
+function Map:draw(drawDebug)
+  self.camera:draw(function(l,t,w,h)
+    if drawDebug then
+      bump_debug.draw(self.world, l,t,w,h)
+    end
 
-  local visibleEntities, len = self.world:queryRect(l,t,w,h)
+    local visibleEntities, len = self.world:queryRect(l,t,w,h)
 
-  table.sort(visibleEntities, sortByZ)
+    table.sort(visibleEntities, sortByZ)
 
-  for i=1, len do
-    visibleEntities[i]:draw(drawDebug)
-  end
+    for i=1, len do
+      visibleEntities[i]:draw(drawDebug)
+    end
+  end)
 end
 
 
