@@ -114,7 +114,7 @@ function Map:update(dt, l,t,w,h)
 end
 
 function Map:draw(drawDebug)
-  self.camera:draw(function(l,t,w,h)
+  self.camera:draw(drawDebug, function(l,t,w,h)
     if drawDebug then
       bump_debug.draw(self.world, l,t,w,h)
     end
