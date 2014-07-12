@@ -7,12 +7,18 @@
 local maxShake = 5
 local shakeIntensityDecreaseSpeed = 4
 
+local maxDistance = 50
+
 local cameraman = {}
 
 local CameraMan = {}
 
-function CameraMan:draw(f)
-  self.camera:draw(f)
+function CameraMan:draw(f, drawDebug)
+  self.camera:draw(function(l,t,w,h)
+    if drawDebug then
+    end
+    f(l,t,w,h)
+  end)
 end
 
 function CameraMan:getVisible()
@@ -29,6 +35,13 @@ function CameraMan:shake(intensity)
 end
 
 function CameraMan:update(dt)
+
+  local target = self.target
+  local tx, ty = target:getCenter()
+  local vx, vy = target.vx, target.vy
+
+  self:setPosition(tx, ty)
+
   self.shakeIntensity = math.max(0 , self.shakeIntensity - shakeIntensityDecreaseSpeed * dt)
 
   if self.shakeIntensity > 0 then
@@ -40,8 +53,14 @@ function CameraMan:update(dt)
   end
 end
 
-cameraman.new = function(camera)
-  return setmetatable({camera = camera, shakeIntensity = 0}, {__index = CameraMan})
+cameraman.new = function(camera, target)
+  return setmetatable({
+    camera          = camera,
+    target          = target,
+    shakeIntensity  = 0
+  },
+  { __index = CameraMan }
+  )
 end
 
 return cameraman
