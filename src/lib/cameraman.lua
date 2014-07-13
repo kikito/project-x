@@ -8,11 +8,13 @@ local cron = require 'lib.cron'
 
 local maxShake                      = 5
 local shakeIntensityDecreaseSpeed   = 4
-local capturePositionFrequency      = 1/60
+local capturePositionFrequency      = 1/100
 local capturePositionDuration       = 0.75 -- seconds
-local averageSpeedExaggeration      = 10 -- 1        = no exaggeration
-
-local maxDistanceToTarget = 150
+local speedExaggeration      = 10 -- 1        = no exaggeration
+local maxDistanceToTarget           = 200
+local minScale                      = 0.25
+local maxScale                      = 0.9
+local minSpeedForScaleChange        = 100
 
 local cameraman = {}
 
@@ -28,13 +30,19 @@ function CameraMan:draw(drawDebug, f)
       local target = self.target
       local cx, cy = target:getCenter()
       local vx, vy = self:getAverageTargetVelocity()
+      local speed = math.sqrt(vx*vx + vy*vy)
+
+      local targetScale = self:getTargetScale(speed) * 300
+      local scale       = self.camera:getScale() * 300
 
       love.graphics.setColor(0,255,255)
       love.graphics.circle('line', cx, cy, maxDistanceToTarget)
+      love.graphics.circle('line', cx, cy, minSpeedForScaleChange)
       love.graphics.circle('line', self.x, self.y, 20)
-
-
       love.graphics.rectangle('line', cx + vx - 10, cy + vy - 10, 20,20)
+
+      love.graphics.rectangle('line', cx - scale / 2, cy - scale / 2, scale, scale)
+      love.graphics.rectangle('line', cx - targetScale / 2, cy - targetScale / 2, targetScale, targetScale)
     end
   end)
 end
@@ -48,7 +56,7 @@ function CameraMan:shake(intensity)
   self.shakeIntensity = math.min(maxShake, self.shakeIntensity + intensity)
 end
 
-function CameraMan:adjustToMaxDistanceToTarget()
+function CameraMan:adjustPositionToMaxDistanceToTarget()
   local target = self.target
   local cx, cy = target:getCenter()
   local dx, dy = self.x - cx, self.y - cy
@@ -62,20 +70,47 @@ function CameraMan:adjustToMaxDistanceToTarget()
   end
 end
 
-function CameraMan:adjustToAverageTargetVelocity()
+function CameraMan:adjustPositionToAverageTargetVelocity(vx,vy)
   local cx, cy = self.target:getCenter()
-  local vx, vy = self:getAverageTargetVelocity()
 
   self.x = cx + vx
   self.y = cy + vy
 end
 
-function CameraMan:update(dt)
+function CameraMan:getTargetScale(speed)
+  if speed <= minSpeedForScaleChange then
+    return maxScale
+  else
+    local d = speed - minSpeedForScaleChange
+    return math.max(minScale, maxScale * (1-d / minSpeedForScaleChange))
+  end
+end
 
+function CameraMan:adjustScaleToTargetVelocity(dt)
+  -- FIXME calculate target speed instead of using target.vx & target.vy here
+  local vx,vy = self.target.vx, self.target.vy
+  local speed = math.sqrt(vx*vx + vy*vy) * speedExaggeration
+
+  local targetScale = self:getTargetScale(speed)
+  local scale       = self.camera:getScale()
+
+  local d = targetScale - scale
+  if d == 0 then return end
+
+  scale = scale + d * 0.8 * dt
+  --scale = math.max(minScale, math.min(maxScale, scale))
+
+  self.camera:setScale(scale)
+end
+
+function CameraMan:update(dt)
   self.timer:update(dt)
 
-  self:adjustToAverageTargetVelocity()
-  self:adjustToMaxDistanceToTarget()
+  local vx, vy = self:getAverageTargetVelocity()
+
+  self:adjustPositionToAverageTargetVelocity(vx, vy)
+  self:adjustScaleToTargetVelocity(dt)
+  self:adjustPositionToMaxDistanceToTarget()
 
   self.camera:setPosition(self.x, self.y)
 
@@ -116,7 +151,7 @@ function CameraMan:getAverageTargetVelocity()
     prev = pos
   end
 
-  local ratio = averageSpeedExaggeration / (len-1)
+  local ratio = speedExaggeration / (len-1)
 
   return sumX * ratio, sumY * ratio
 end
@@ -131,6 +166,8 @@ cameraman.new = function(camera, target)
     y               = y,
     pastPositions   = {{x=x,y=y}}
   }, CameraManMt)
+
+  camera:setScale(maxScale)
 
   self.timer        = cron.every(capturePositionFrequency, CameraMan.pushTargetPosition, self)
   return self
