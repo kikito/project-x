@@ -73,8 +73,9 @@ end
 function CameraMan:adjustPositionToAverageTargetVelocity(vx,vy)
   local cx, cy = self.target:getCenter()
 
-  self.x = cx + vx
-  self.y = cy + vy
+  local avx, avy = self:getAverageTargetVelocity()
+  self.x = cx + avx
+  self.y = cy + avy
 end
 
 function CameraMan:getTargetScale(speed)
@@ -87,8 +88,7 @@ function CameraMan:getTargetScale(speed)
 end
 
 function CameraMan:adjustScaleToTargetVelocity(dt)
-  -- FIXME calculate target speed instead of using target.vx & target.vy here
-  local vx,vy = self.target.vx, self.target.vy
+  local vx,vy = self:getTargetVelocity()
   local speed = math.sqrt(vx*vx + vy*vy) * speedExaggeration
 
   local targetScale = self:getTargetScale(speed)
@@ -106,9 +106,7 @@ end
 function CameraMan:update(dt)
   self.timer:update(dt)
 
-  local vx, vy = self:getAverageTargetVelocity()
-
-  self:adjustPositionToAverageTargetVelocity(vx, vy)
+  self:adjustPositionToAverageTargetVelocity(avx, avy)
   self:adjustScaleToTargetVelocity(dt)
   self:adjustPositionToMaxDistanceToTarget()
 
@@ -125,15 +123,25 @@ end
 
 function CameraMan:pushTargetPosition()
   local target = self.target
+  local pastPos = self.pastPositions
   local cx,cy = target:getCenter()
 
-  self.pastPositions[#self.pastPositions + 1] = {x=cx,y=cy}
+  pastPos[#pastPos + 1] = {x=cx,y=cy}
 
   local maxPastPositions = capturePositionDuration / capturePositionFrequency
 
-  if #self.pastPositions > maxPastPositions then
-    table.remove(self.pastPositions, 1)
+  if #pastPos > maxPastPositions then
+    table.remove(pastPos, 1)
   end
+end
+
+function CameraMan:getTargetVelocity()
+  local pastPos = self.pastPositions
+  local last    = pastPos[#pastPos - 1]
+  if not last then return 0,0 end
+
+  local cx,cy = self.target:getCenter()
+  return cx - last.x, cy - last.y
 end
 
 function CameraMan:getAverageTargetVelocity()
