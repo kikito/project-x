@@ -17,7 +17,7 @@ local map
 
 function love.load()
   media.load()
-  map = Map:new(4000, 2000) -- width, height
+  map = Map:new(100000, 4000) -- width, height
 end
 
 -- Updating
