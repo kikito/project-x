@@ -67,22 +67,21 @@ function Map:reset()
     Block:new(self.world, i*width/tilesOnFloor, height-32, width/tilesOnFloor, 32, true)
   end
 
-  -- groups of blocks
   local l,t,w,h, area
-  for i=1,60 do
-    w = random(100, 400)
-    h = random(100, 400)
+  for i=1,math.floor(width * height / 1000000) do
+    w = random(400, 800)
+    h = random(400, 800)
     area = w * h
     l = random(100, width-w-200)
     t = random(100, height-h-100)
 
 
-    for i=1, math.floor(area/7000) do
+    for i=1, math.floor(area/20000) do
       Block:new( self.world,
                  random(l, l+w),
                  random(t, t+h),
-                 random(32, 100),
-                 random(32, 100),
+                 random(100, 300),
+                 random(100, 300),
                  random() > 0.75 )
     end
   end
@@ -116,7 +115,7 @@ end
 function Map:draw(drawDebug)
   self.camera:draw(drawDebug, function(l,t,w,h)
     if drawDebug then
-      bump_debug.draw(self.world, l,t,w,h)
+      --bump_debug.draw(self.world, l,t,w,h)
     end
 
     local visibleEntities, len = self.world:queryRect(l,t,w,h)
